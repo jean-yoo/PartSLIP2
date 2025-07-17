@@ -59,14 +59,14 @@ def segment(sam_predictor, xyxy) -> np.ndarray:
     mask = masks[index]
     return mask
 
-def glip_inference(glip_demo, save_dir, part_names, sam_predictor, num_views=10, 
+def glip_inference(glip_demo, save_dir, img_dir, part_names, sam_predictor, num_views=10, 
                     save_pred_img=True, save_individual_img=False, save_pred_json=False):
     pred_dir = os.path.join(save_dir, "glip_pred")
     os.makedirs(pred_dir, exist_ok = True)
     seg_masks = [[] for _ in range(num_views)]
     preds = [[] for _ in range(num_views)]
     for i in range(num_views):
-        image = load_img("%s/rendered_img/%d.png" % (save_dir, i))
+        image = load_img("%s/rendered_img/%d.png" % (img_dir, i))
         result, top_predictions = glip_demo.run_on_web_image(image, part_names, 0.5) 
         if save_pred_img:   
             plt.imsave("%s/%d.png" % (pred_dir, i), result[:, :, [2, 1, 0]])
@@ -80,7 +80,7 @@ def glip_inference(glip_demo, save_dir, part_names, sam_predictor, num_views=10,
             preds[i].append((np.array([x1, y1, x2, y2]), labels[j].item() - 1))
 
     for i in range(num_views):
-        image = load_img("%s/rendered_img/%d.png" % (save_dir, i))
+        image = load_img("%s/rendered_img/%d.png" % (img_dir, i))
         sam_predictor.set_image(image)
         preds_view = preds[i]
         for pred in preds_view:

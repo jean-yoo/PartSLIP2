@@ -45,6 +45,31 @@ def render_pc(xyz, rgb, save_dir, device):
     indices = [0, 4, 7, 1, 5, 2, 8, 6, 3, 9]
 
     views = [[10, 0], [10, 90], [10, 180], [10, 270], [40, 0], [40, 120], [40, 240], [-20, 60], [-20, 180], [-20, 300]]
+    num_views = len(views)
+
+    # Check if already rendered, ignoring and deleting '._' files
+    existing_imgs = []
+    for f in os.listdir(img_dir):
+        if f.startswith('._'):
+            try:
+                os.remove(os.path.join(img_dir, f))
+                print(f"[Deleted macOS resource fork file: {f}]")
+            except Exception as e:
+                print(f"[Failed to delete {f}: {e}]")
+            continue
+        if f.endswith('.png'):
+            existing_imgs.append(f)
+    if len(existing_imgs) == num_views:
+        print(f"[Skipping rendering: {img_dir} already has {num_views} images]")
+        idx_path = f"{save_dir}/idx.npy"
+        coor_path = f"{save_dir}/coor.npy"
+        if os.path.exists(idx_path) and os.path.exists(coor_path):
+            pc_idx = np.load(idx_path)
+            screen_coords = np.load(coor_path)
+            return img_dir, pc_idx, screen_coords, num_views
+        else:
+            print("[Images exist but idx.npy or coor.npy missing, rerendering...]")
+    
     pc_idx_list = []
     screen_coords_list = []
 
@@ -55,8 +80,8 @@ def render_pc(xyz, rgb, save_dir, device):
         screen_coords_list.append(screen_coords)
 
     pc_idx = torch.cat(pc_idx_list, dim=0).squeeze()
-    screen_coords = torch.cat(screen_coords_list, dim=0).reshape(len(views),-1, 3)[...,:2]
+    screen_coords = torch.cat(screen_coords_list, dim=0).reshape(num_views,-1, 3)[...,:2]
 
     np.save(f"{save_dir}/idx.npy", pc_idx.cpu().numpy())
     np.save(f"{save_dir}/coor.npy", screen_coords.cpu().numpy())
-    return img_dir, pc_idx.cpu().numpy(), screen_coords.cpu().numpy(), len(views)
+    return img_dir, pc_idx.cpu().numpy(), screen_coords.cpu().numpy(), num_views

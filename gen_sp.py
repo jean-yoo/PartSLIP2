@@ -32,21 +32,39 @@ def Infer(input_pc_file, category, part_names, zero_shot=False, save_dir="tmp"):
 if __name__ == "__main__":
     partnete_meta = json.load(open("PartNetE_meta.json")) 
     categories = partnete_meta.keys()
-    categories_list = [["Box", "Bucket", "Clock", "CoffeeMachine"],
-                       ["Dishwasher", "Eyeglasses", "Faucet", "FoldingChair"],
-                       ["Lighter", "Microwave", "Mouse", "Pen", "WashingMachine"],
-                        ["Phone", "Pliers", "Printer", "Refrigerator", "Window"],
-                        ["Remote", "Safe", "Scissors", "Stapler"],
-                        ["Switch", "Toilet", "TrashCan", "USB"]]
+    categories_list =["Chair"]
+    # [["Box", "Bucket", "Clock", "CoffeeMachine"],
+    #                    ["Dishwasher", "Eyeglasses", "Faucet", "FoldingChair"],
+    #                    ["Lighter", "Microwave", "Mouse", "Pen", "WashingMachine"],
+    #                     ["Phone", "Pliers", "Printer", "Refrigerator", "Window"],
+    #                     ["Remote", "Safe", "Scissors", "Stapler"],
+    #                     ["Switch", "Toilet", "TrashCan", "USB"]]
 
     # categories = ["Camera", "Cart", "Dispenser", "Kettle"]
     # categories = ["Bottle", "Chair", "Display", "Door"]
     # categories = ["Knife", "Lamp", "StorageFurniture", "Table"]
     # categories = ["KitchenPot", "Oven", "Suitcase", "Toaster"]
-    categories = categories_list[5]
+    categories = categories_list
     for category in categories:  
         models = os.listdir(f"./data/test/{category}") # list of models
-        # models = sorted(models)
+                # models = sorted(models)
         for model in models:
+            model_path = os.path.join(f"./data/test/{category}", model)
+            if model.startswith("._") or model == ".DS_Store":
+                try:
+                    if os.path.isdir(model_path):
+                        import shutil
+                        shutil.rmtree(model_path)
+                        print(f"[Deleted resource fork directory: {model_path}]")
+                    else:
+                        os.remove(model_path)
+                        print(f"[Deleted resource fork file: {model_path}]")
+                except Exception as e:
+                    print(f"[Failed to delete {model_path}: {e}]")
+                continue  # Skip macOS resource fork files and .DS_Store
+            # Only process if it's a directory
+            if not os.path.isdir(model_path):
+                print(f"[Skipping non-directory: {model_path}]")
+                continue
             Infer(f"./data/test/{category}/{model}/pc.ply", category, partnete_meta[category], zero_shot=False, save_dir=f"./data/img_sp/{category}/{model}")
         

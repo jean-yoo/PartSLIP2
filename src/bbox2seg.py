@@ -4,7 +4,6 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from utils import save_colored_pc, get_iou
 from PIL import Image
-import supervision as sv
 import matplotlib.pyplot as plt
 from glip_inference import draw_rectangle, load_img
 

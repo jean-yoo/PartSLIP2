@@ -1,7 +1,7 @@
 from src.mask2ins_refine import sem2ins
 from pytorch3d.io import IO
 import os
-from utils import normalize_pc
+from src.utils import normalize_pc
 import torch
 import numpy as np
 import json
@@ -24,10 +24,24 @@ def test(input_pc_file, part_names, sp_dir, save_dir="tmp"):
 if __name__ == "__main__":
     partnete_meta = json.load(open("PartNetE_meta.json")) 
     categories = partnete_meta.keys()
+    categories = ["Chair"]
 
     for category in categories:
         models = os.listdir(f"./data/img_sp/{category}") # list of models
         for model in models:
+            if model.startswith("._"):
+                model_path = os.path.join(f"./data/img_sp/{category}", model)
+                try:
+                    if os.path.isdir(model_path):
+                        import shutil
+                        shutil.rmtree(model_path)
+                        print(f"[Deleted resource fork directory: {model_path}]")
+                    else:
+                        os.remove(model_path)
+                        print(f"[Deleted resource fork file: {model_path}]")
+                except Exception as e:
+                    print(f"[Failed to delete {model_path}: {e}")
+                continue  # Skip macOS resource fork files
             print(f"Category: {category}, Model: {model}")
             test(f"./data/test/{category}/{model}/pc.ply", partnete_meta[category], 
                  sp_dir=f"./data/img_sp/{category}/{model}",

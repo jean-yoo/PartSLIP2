@@ -44,10 +44,11 @@ def Infer(input_pc_file, category, model, part_names, zero_shot=False, save_dir=
     sam = sam_model_registry[SAM_ENCODER_VERSION](checkpoint=SAM_CHECKPOINT_PATH)
     sam.to(device=torch.device("cuda:0"))
     sam_predictor = SamPredictor(sam)
-    masks = glip_inference(glip_demo, save_dir, part_names, sam_predictor, num_views=num_views)
+    masks = glip_inference(
+        glip_demo = glip_demo, save_dir = save_dir, img_dir = f'data/img_sp/Chair/{model}', part_names = part_names, sam_predictor = sam_predictor, num_views = num_views)
     
     print('[generating superpoints...]')
-    superpoint = np.load(f"./data/img_sp_more_views/{category}/{model}/sp.npy", allow_pickle=True)
+    superpoint = np.load(f"./data/img_sp/{category}/{model}/sp.npy", allow_pickle=True)
     
     print('[converting bbox to 3D segmentation...]')
     bbox2seg(xyz, superpoint, masks, screen_coords, pc_idx, part_names, save_dir, solve_instance_seg=True, num_view=num_views)
@@ -56,7 +57,8 @@ def Infer(input_pc_file, category, model, part_names, zero_shot=False, save_dir=
     
 if __name__ == "__main__":
     partnete_meta = json.load(open("PartNetE_meta.json")) 
-    categories = partnete_meta.keys()
+    categories = partnete_meta.keys()#['chair', 'table', 'sofa', 'bed', 'cabinet', 'chair', 'table', 'sofa', 'bed', 'cabinet']
+    categories = ['Chair']
     for category in categories:
         models = os.listdir(f"./data/test/{category}") # list of models
         for model in models:

@@ -1,5 +1,5 @@
 import numpy as np
-from utils import save_colored_pc
+from src.utils import save_colored_pc, get_iou
 from scipy.stats import mode
 import os
 import random
@@ -9,8 +9,7 @@ import torch.nn.functional as F
 from scipy.optimize import linear_sum_assignment
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 import matplotlib.pyplot as plt
-from glip_inference import glip_inference, load_model
-from utils import get_iou
+from src.glip_inference import glip_inference, load_model
 
 def load_img(file_name):
     pil_image = Image.open(file_name).convert("RGB")
@@ -51,9 +50,29 @@ def glip_infer(category, save_dir, part_names, num_views, point_idx_all, device,
     sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
     sam.to(device="cuda:0")
     sam_predictor = SamPredictor(sam)
-    masks_all_view, cat_ids, bboxs = glip_inference(glip_demo, save_dir, img_dir, part_names, sam_predictor, num_views)
+
+    #masks_all_view, cat_ids, bboxs
+    seg_masks = glip_inference(
+        glip_demo=glip_demo,
+        save_dir=save_dir,
+        img_dir=img_dir,
+        part_names=part_names,
+        sam_predictor=sam_predictor,
+        num_views=num_views
+    )
     
     pixel_instance_id_all_views = []
+
+    masks_all_view = []
+    cat_ids = []    
+    bboxs = []
+    for view in seg_masks:
+        masks_all_view.append([tup[0] for tup in view])
+        cat_ids.append([tup[1] for tup in view])
+        bboxs.append([tup[2] for tup in view])
+    
+
+
     for i in range(num_views):
         valid_mask = (point_idx_all[i] >= 0)
         image = load_img(f"{img_dir}/rendered_img/{i}.png")
@@ -278,7 +297,10 @@ def sem2ins(xyz, rgb, screen_coor_all, point_idx_all, part_names,
     sem_seg = load_partslip_semantic(category, model, part_names, xyz)
     sem_seg_instance = np.zeros([len(instances)])
     for i, ins in enumerate(instances):
-        sem_seg_instance[i] = mode(sem_seg[ins])[0][0]
+        if len(ins) == 0:
+            sem_seg_instance[i] = -1
+        else:
+            sem_seg_instance[i] = np.squeeze(mode(sem_seg[ins], keepdims=False).mode)
 
     flags = [False for _ in range(len(instances))]
     for i in range(num_view):

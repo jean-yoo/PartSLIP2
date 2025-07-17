@@ -1,1 +1,6 @@
-.DS_Store
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+._DS_Store
+._*
