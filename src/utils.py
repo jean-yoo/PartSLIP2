@@ -1,7 +1,7 @@
 import os
 import torch
 import numpy as np
-
+import trimesh
 def normalize_pc(pc_file, save_dir, io, device, save_normalized_pc=False):
     pc = io.load_pointcloud(pc_file, device = device)
     xyz = pc.points_padded().reshape(-1,3)
@@ -13,6 +13,37 @@ def normalize_pc(pc_file, save_dir, io, device, save_normalized_pc=False):
     if save_normalized_pc:
         save_colored_pc(os.path.join(save_dir, "normalized_pc.ply"), xyz, rgb)
     return xyz, rgb
+
+def normalize_pc_from_mesh(pc_file, save_dir, device, save_normalized_pc=False, n_samples=300000):
+    mesh = trimesh.load(pc_file, process=False)
+
+    # Sample points from mesh surface
+    points, face_indices = trimesh.sample.sample_surface(mesh, n_samples)
+
+    # Get colors (average vertex color for the face)
+    if hasattr(mesh.visual, "vertex_colors") and mesh.visual.vertex_colors is not None:
+        # Get per-face vertex colors and average them
+        vertex_colors = mesh.visual.vertex_colors[:, :3]
+        colors = vertex_colors[mesh.faces[face_indices]].mean(axis=1)
+    else:
+        # Default gray if no color
+        colors = np.ones_like(points) * 127
+
+    # Normalize
+    xyz = torch.tensor(points, dtype=torch.float32, device=device)
+    rgb = torch.tensor(colors / 255.0, dtype=torch.float32, device=device)
+
+    xyz = xyz - xyz.mean(dim=0)
+    xyz = xyz / torch.norm(xyz, dim=1).max()
+
+    # Convert to numpy for return and optional saving
+    xyz_np = xyz.cpu().numpy()
+    rgb_np = rgb.cpu().numpy()
+
+    if save_normalized_pc:
+        save_colored_pc(os.path.join(save_dir, "normalized_pc.ply"), xyz_np, rgb_np)
+
+    return xyz_np, rgb_np
 
 def save_colored_pc(file_name, xyz, rgb):
     n = xyz.shape[0]

@@ -42,7 +42,7 @@ def calc_sp_connectivity(xyz, superpoints, thr=0.05):
 
 def glip_infer(category, save_dir, part_names, num_views, point_idx_all, device, img_dir):
     config ="./GLIP/configs/glip_Swin_L_pt.yaml"
-    weight_path = "./models/%s.pth" % category
+    weight_path = "./models/%s.pth" % 'Chair' #category
     glip_demo = load_model(config, weight_path)
 
     model_type = "vit_h"
@@ -174,7 +174,10 @@ def load_partslip(category, model, part_names, xyz, num_instance,
         for ins in np.unique(point_instance_labels):
             if ins == 0:
                 continue
-            point_logits[point_instance_labels == ins, instance_idx] = num_instance
+            if instance_idx >= num_instance:
+                print(f"Warning: More instances than num_instance ({num_instance})! Skipping extra.")
+                continue
+            point_logits[point_instance_labels == ins, instance_idx] = instance_idx
             instance_idx += 1
     sp_logits = np.zeros([num_superpoints, num_instance])
     for i, sp in enumerate(superpoints):
@@ -182,10 +185,10 @@ def load_partslip(category, model, part_names, xyz, num_instance,
             if point_logits[p].sum() != 0:
                 sp_logits[i] = point_logits[p]
                 break
-        
-    sp_logits[sp_logits.sum(1) == 0, instance_idx] = num_instance
+    if instance_idx < num_instance:
+        sp_logits[sp_logits.sum(1) == 0, instance_idx] = instance_idx
     # assert (sp_logits.sum(1) == num_instance).all()
-    return sp_logits, instance_idx + 1
+    return sp_logits, instance_idx
 
 
 def sem2ins(xyz, rgb, screen_coor_all, point_idx_all, part_names, 
@@ -194,10 +197,10 @@ def sem2ins(xyz, rgb, screen_coor_all, point_idx_all, part_names,
     regenerate_sam = True
     device = torch.device("cuda:0")
     category, model = save_dir.split("/")[-2], save_dir.split("/")[-1]       
-    point_instance_id = np.load(f"./data/test/{category}/{model}/label.npy", allow_pickle=True).item()["instance_seg"]
-    point_instance_id += 1
-    point_instance_id_pad = np.concatenate([point_instance_id, [-1]])
-    point_instance_id_pad = torch.as_tensor(point_instance_id_pad, device=device)
+    # point_instance_id = np.load(f"./data/test/{category}/{model}/label.npy", allow_pickle=True).item()["instance_seg"]
+    # point_instance_id += 1
+    # point_instance_id_pad = np.concatenate([point_instance_id, [-1]])
+    # point_instance_id_pad = torch.as_tensor(point_instance_id_pad, device=device)
     superpoints = np.load(f"./data/img_sp/{category}/{model}/sp.npy", allow_pickle=True)
 
     medium_save_path = f"./result_ps++/{category}/{model}"
@@ -210,7 +213,7 @@ def sem2ins(xyz, rgb, screen_coor_all, point_idx_all, part_names,
         pixel_instance_id_all_views = torch.load(f"{medium_save_path}/glip_sam_cache_{num_view}.npy", map_location=device)
         mask_cat_ids = torch.load(f"{medium_save_path}/cat_ids_cache_{num_view}.npy")
 
-    num_point = point_instance_id.shape[0]
+    # num_point = point_instance_id.shape[0]
     num_superpoints = superpoints.shape[0]
     point2superpoint = np.zeros(xyz.shape[0])
     for i, sp in enumerate(superpoints):
@@ -221,7 +224,7 @@ def sem2ins(xyz, rgb, screen_coor_all, point_idx_all, part_names,
     if category == "Keyboard":
         num_instance = 130
     else:
-        num_instance = 28
+        num_instance = 50 # changed from 28
     num_epoch = 10
     H, W = point_idx_all.shape[1:]
     superpoints_logits, pretrained_num_instance = load_partslip(category, model, part_names, xyz, num_instance, num_superpoints, superpoints)

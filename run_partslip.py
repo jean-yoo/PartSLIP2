@@ -3,11 +3,14 @@ import torch
 import json
 from pytorch3d.io import IO
 import numpy as np
-from src.utils import normalize_pc
+from src.utils import normalize_pc, normalize_pc_from_mesh, save_colored_pc
 from src.render_pc import render_pc
 from src.glip_inference import glip_inference, load_model
 from src.bbox2seg import bbox2seg
 from segment_anything import sam_model_registry, SamPredictor
+
+META_FILE = "PartNet_meta.json"
+CAT_FOLDER = "chair_partnet"
 
 def Infer(input_pc_file, category, model, part_names, zero_shot=False, save_dir="tmp"):
     if zero_shot:
@@ -16,7 +19,7 @@ def Infer(input_pc_file, category, model, part_names, zero_shot=False, save_dir=
         print("-----Zero-shot inference of %s-----" % input_pc_file)
     else:
         config ="GLIP/configs/glip_Swin_L_pt.yaml"
-        weight_path = "./models/%s.pth" % category
+        weight_path = "./models/%s.pth" % 'Chair'#category
         print("-----Few-shot inference of %s-----" % input_pc_file)
         
     print("[loading GLIP model...]")
@@ -33,7 +36,7 @@ def Infer(input_pc_file, category, model, part_names, zero_shot=False, save_dir=
     print(save_dir)
     
     print("[normalizing input point cloud...]")
-    xyz, rgb = normalize_pc(input_pc_file, save_dir, io, device)
+    xyz, rgb =  normalize_pc_from_mesh(pc_file =input_pc_file, save_dir = save_dir, device = device)
     
     print("[rendering input point cloud...]")
     img_dir, pc_idx, screen_coords, num_views = render_pc(xyz, rgb, save_dir, device)
@@ -45,22 +48,22 @@ def Infer(input_pc_file, category, model, part_names, zero_shot=False, save_dir=
     sam.to(device=torch.device("cuda:0"))
     sam_predictor = SamPredictor(sam)
     masks = glip_inference(
-        glip_demo = glip_demo, save_dir = save_dir, img_dir = f'data/img_sp/Chair/{model}', part_names = part_names, sam_predictor = sam_predictor, num_views = num_views)
+        glip_demo = glip_demo, save_dir = save_dir, img_dir = f'data/img_sp/{CAT_FOLDER}/{model}', part_names = part_names, sam_predictor = sam_predictor, num_views = num_views)
     
     print('[generating superpoints...]')
-    superpoint = np.load(f"./data/img_sp/{category}/{model}/sp.npy", allow_pickle=True)
-    
+    superpoint = np.load(f"./data/img_sp/{CAT_FOLDER}/{model}/sp.npy", allow_pickle=True)
+
     print('[converting bbox to 3D segmentation...]')
     bbox2seg(xyz, superpoint, masks, screen_coords, pc_idx, part_names, save_dir, solve_instance_seg=True, num_view=num_views)
     
     print("[finish!]")
     
 if __name__ == "__main__":
-    partnete_meta = json.load(open("PartNetE_meta.json")) 
-    categories = partnete_meta.keys()#['chair', 'table', 'sofa', 'bed', 'cabinet', 'chair', 'table', 'sofa', 'bed', 'cabinet']
-    categories = ['Chair']
+    partnet_meta = json.load(open(META_FILE)) 
+    categories = partnet_meta.keys()#['chair', 'table', 'sofa', 'bed', 'cabinet', 'chair', 'table', 'sofa', 'bed', 'cabinet']
     for category in categories:
-        models = os.listdir(f"./data/test/{category}") # list of models
+        models = ['ut_vis_chair_37569.ply']
+        #models = os.listdir(f"./data/test/{category}") # list of models
         for model in models:
-            Infer(f"./data/test/{category}/{model}/pc.ply", category, model, partnete_meta[category], zero_shot=False, save_dir=f"./result_ps/{category}/{model}")
+            Infer(f"./data/partnet/{category}/{model}", category, model, partnet_meta[category], zero_shot=False, save_dir=f"./result_ps/{category}/{model}")
         

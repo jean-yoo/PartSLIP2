@@ -1,10 +1,13 @@
 from src.mask2ins_refine import sem2ins
 from pytorch3d.io import IO
 import os
-from src.utils import normalize_pc
+from src.utils import normalize_pc, normalize_pc_from_mesh
 import torch
 import numpy as np
 import json
+
+META_FILE = "PartNet_meta.json"
+CAT_FOLDER = "chair_partnet"
 
 def test(input_pc_file, part_names, sp_dir, save_dir="tmp"):
     io = IO()
@@ -12,7 +15,7 @@ def test(input_pc_file, part_names, sp_dir, save_dir="tmp"):
 
     device = torch.device("cuda:0")
 
-    xyz, rgb = normalize_pc(input_pc_file, save_dir, io, device)
+    xyz, rgb = normalize_pc_from_mesh(pc_file =input_pc_file, save_dir = save_dir, device = device)
 
     idx_dir = f"{sp_dir}/idx_dir"
     pc_idx = np.load(f"{sp_dir}/idx.npy", allow_pickle=True)
@@ -22,15 +25,16 @@ def test(input_pc_file, part_names, sp_dir, save_dir="tmp"):
                    save_dir, 20, pc_idx.shape[0], img_dir=sp_dir)
     
 if __name__ == "__main__":
-    partnete_meta = json.load(open("PartNetE_meta.json")) 
+    partnete_meta = json.load(open(META_FILE)) 
     categories = partnete_meta.keys()
-    categories = ["Chair"]
+    #categories = ["Chair"]
 
     for category in categories:
-        models = os.listdir(f"./data/img_sp/{category}") # list of models
+        #models = os.listdir(f"./data/img_sp/{CAT_FOLDER}") # list of models
+        models = ['ut_vis_chair_37569.ply']
         for model in models:
             if model.startswith("._"):
-                model_path = os.path.join(f"./data/img_sp/{category}", model)
+                model_path = os.path.join(f"./data/img_sp/{CAT_FOLDER}", model)
                 try:
                     if os.path.isdir(model_path):
                         import shutil
@@ -43,6 +47,6 @@ if __name__ == "__main__":
                     print(f"[Failed to delete {model_path}: {e}")
                 continue  # Skip macOS resource fork files
             print(f"Category: {category}, Model: {model}")
-            test(f"./data/test/{category}/{model}/pc.ply", partnete_meta[category], 
-                 sp_dir=f"./data/img_sp/{category}/{model}",
-                 save_dir=f"./result_ps++/{category}/{model}")
+            test(f"./data/partnet/{category}/{model}", partnete_meta[category], 
+                 sp_dir=f"./data/img_sp/{CAT_FOLDER}/{model}",
+                 save_dir=f"./result_ps++/{CAT_FOLDER}/{model}")
