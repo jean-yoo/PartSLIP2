@@ -48,6 +48,8 @@ if __name__ == "__main__":
         models = os.listdir(f"./data/partnet/{category}") # list of models
                 # models = sorted(models)
         for model in models:
+            if 'chair_test' not in model:
+                continue
             model_path = os.path.join(f"./data/partnet/{category}", model)
             if model.startswith("._") or model == ".DS_Store":
                 try:
@@ -65,4 +67,4 @@ if __name__ == "__main__":
             # if not os.path.isdir(model_path):
             #     print(f"[Skipping non-directory: {model_path}]")
             #     continue
-            Infer(f"./data/partnet/{category}/ut_vis_chair_37569.ply", category, partnet_meta[category], zero_shot=False, save_dir=f"./data/img_sp/{category}_partnet/{model}")
+            Infer(f"./data/partnet/{category}/chair_test.ply", category, partnet_meta[category], zero_shot=False, save_dir=f"./data/img_sp/{category}_partnet/{model}")

@@ -62,7 +62,7 @@ if __name__ == "__main__":
     partnet_meta = json.load(open(META_FILE)) 
     categories = partnet_meta.keys()#['chair', 'table', 'sofa', 'bed', 'cabinet', 'chair', 'table', 'sofa', 'bed', 'cabinet']
     for category in categories:
-        models = ['ut_vis_chair_37569.ply']
+        models = ['chair_test.ply']
         #models = os.listdir(f"./data/test/{category}") # list of models
         for model in models:
             Infer(f"./data/partnet/{category}/{model}", category, model, partnet_meta[category], zero_shot=False, save_dir=f"./result_ps/{category}/{model}")

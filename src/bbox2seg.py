@@ -43,7 +43,6 @@ def get_union(f, x): # union-find
 def calc_sp_connectivity(xyz, superpoints, thr=0.02): 
 # calculate connectivity (bounding box adjacency) between superpoints
     n = len(superpoints)
-    print(xyz.shape, superpoints.shape)
     X_min, X_max = [], []
     for i in range(n):
         X_min.append(xyz[superpoints[i], :].min(axis=0))
@@ -127,27 +126,19 @@ def bbox2seg(xyz, superpoint, masks, screen_coor_all, point_idx_all, part_names,
 
     sem_score = sp_bbox_visible_cnt / (sp_visible_cnt.reshape(1, -1) + 1e-6)
     sem_score[:, sp_visible_cnt == 0] = 0
-    # Print scores for the first 10 superpoints (or all, if you want)
-    for k in range(min(10, n_sp)):
-        print(f"Superpoint {k}:")
-        for j in range(n_category):
-            print(f"  Category {part_names[j]}: score = {sem_score[j, k]:.3f}")
-        print(f"  Total visible: {sp_visible_cnt[k]}")
-        print(f"  Assigned label: {part_names[np.argmax(sem_score[:, k])] if sp_visible_cnt[k] > 0 else 'None'}")
-        print("-" * 30)
     sem_seg = np.ones(xyz.shape[0], dtype=np.int32) * -1
 
     # assign semantic labels to superpoints
     for i in range(n_sp):
         if sem_score[:, i].max() < 0.5:
             continue
-        # idx = -1
-        # for j in reversed(range(n_category)): #give priority to small parts
-        #     if sem_score[j, i] >= 0.5 and part_names[j] in ["handle", "button", "wheel", "knob", "switch", "bulb", "shaft", "touchpad", "camera", "screw"]:
-        #         idx = j
-        #         break
-        # if idx == -1:
-        idx = np.argmax(sem_score[:, i])
+        idx = -1
+        for j in reversed(range(n_category)): #give priority to small parts
+            if sem_score[j, i] >= 0.5 and part_names[j] in ["handle", "button", "wheel", "knob", "switch", "bulb", "shaft", "touchpad", "camera", "screw"]:
+                idx = j
+                break
+        if idx == -1:
+            idx = np.argmax(sem_score[:, i])
         sem_seg[superpoint[i]] = idx
     if visualize:
         os.makedirs("%s/semantic_seg" % save_dir, exist_ok=True)  
@@ -226,5 +217,4 @@ def bbox2seg(xyz, superpoint, masks, screen_coor_all, point_idx_all, part_names,
                 rgb_ins[instances[i]] = np.random.rand(3)  
         if visualize:
             save_colored_pc("%s/instance_seg/%s.ply" % (save_dir, part_names[j]), xyz, rgb_ins)
-
     return sem_seg, ins_seg

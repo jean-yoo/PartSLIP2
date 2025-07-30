@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     for category in categories:
         #models = os.listdir(f"./data/img_sp/{CAT_FOLDER}") # list of models
-        models = ['ut_vis_chair_37569.ply']
+        models = ['chair_test.ply']
         for model in models:
             if model.startswith("._"):
                 model_path = os.path.join(f"./data/img_sp/{CAT_FOLDER}", model)
